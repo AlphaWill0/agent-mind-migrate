@@ -54,9 +54,9 @@ python ~/.claude/skills/claude-migrate/scripts/migrate.py init --remote <git-url
 python ~/.claude/skills/claude-migrate/scripts/migrate.py backup [--tier essential|full] [--message "说明"] [--push]
 ```
 
-- `--tier essential`（默认）：备份核心配置和所有 skill
-- `--tier full`：上述 + 命令历史 + plugins
-- `--push`：备份后推送到远程仓库
+- `--tier essential`（默认）：核心配置 + skills + memory + rules + agents + commands + 定时任务 + 统计
+- `--tier full`：上述 + 命令历史 + plugins + 规划方案（换机器时推荐）
+- `--push`：备份后推送到远程仓库（**网络外发操作，执行前告知用户**）
 - 自动脱敏：token/密码/代理地址替换为 `__REDACTED__`
 - Git-based skills 只存 remote URL（`.gitremote`），不拷贝 node_modules
 - 原子写入：通过 staging 目录保证备份完整性
