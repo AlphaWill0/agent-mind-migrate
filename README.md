@@ -109,22 +109,26 @@ Config, identity (SOUL.md), memories, skills, cron. Sensitive files (`.env`, `au
 Each agent gets its own directory — clean separation, no conflicts:
 
 ```
-~/.claude-backup/
-├── manifest.json        # Which agents, when, integrity hashes
-├── claude-code/         # Claude Code backup
+your-backup-repo/
+├── manifest.json          # Which agents, when, integrity hashes
+├── claude-code/           # Claude Code backup
 │   ├── claude.json
-│   ├── skills/
+│   ├── settings.json
 │   ├── CLAUDE.md
+│   ├── skills/
+│   ├── rules/
 │   └── ...
-├── openclaw/            # OpenClaw backup
+├── openclaw/              # OpenClaw backup (when detected)
 │   ├── openclaw.json
+│   ├── memory/
 │   └── ...
-└── hermes/              # Hermes backup
+└── hermes/                # Hermes backup (when detected)
     ├── config.yaml
+    ├── SOUL.md
     └── ...
 ```
 
-Backward compatible: v3.x backups (flat structure) are auto-detected as Claude Code.
+Each agent directory is only created when that agent is detected on your machine. Backward compatible: v3.x backups (flat structure) are auto-detected as Claude Code.
 
 ## 🔧 Commands
 
