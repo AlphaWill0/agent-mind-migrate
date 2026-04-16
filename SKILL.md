@@ -115,6 +115,16 @@ python ~/.claude/skills/claude-migrate/scripts/migrate.py backup --push
 python ~/.claude/skills/claude-migrate/scripts/migrate.py restore --conflict backup-existing --only skills memory
 ```
 
+## 错误处理
+
+| 场景 | 表现 | 处理 |
+|------|------|------|
+| 未 init 就 `--push` | git push 报错 no remote | 先执行 `init --remote <url>`，再重试 backup |
+| 网络断开时 push 失败 | 备份已完成，仅推送失败 | 本地备份不受影响，网络恢复后 `backup --push` 重试 |
+| restore 校验失败 | SHA-256 不匹配 | 默认中止；`--force` 可跳过（谨慎使用） |
+| 新机器不知道 repo URL | 无法 clone | 旧机器执行 `status` 查看 remote 地址 |
+| 还原后脱敏字段为 `__REDACTED__` | 敏感值需手动填写 | 智能合并会保留本机已有值；纯新机器需手动补 token/密码 |
+
 ---
 
 ## 变更历史
