@@ -41,28 +41,40 @@ python migrate.py backup [--tier essential|full] [--agents claude-code,openclaw,
 - **备份前先告知用户检测到哪些 Agent、上次备份时间，确认后再执行**
 - `--tier essential`（默认）：核心配置。`--tier full`：含历史和插件（**换机器推荐**）
 - `--agents`：只备份指定 Agent。不传则自动发现并备份所有
-- `--push`：推送到远程仓库（**网络外发操作，执行前告知用户**）
+- `--push`：推送到远程仓库（**网络外发操作，执行前告知用户**）。如果用户没明确说要推送，默认只做本地备份，问用户是否要推送
 - 自动脱敏 token/密码 → `__REDACTED__`
 - 原子写入 + SHA-256 完整性校验
+- git skill（`.gitremote` 文件）只存 URL + commit SHA，不拷贝整个仓库
 
 ## restore — 还原
 
 > **⚠️ 还原前必须先 dry-run 预览。** 跳过 dry-run 直接执行会提示警告。
 
+### 还原三步走
+
 ```bash
-# 第一步：预览将要还原的内容
+# Step 1: 预览（必须先跑，确认要还原的文件列表）
 python migrate.py restore --dry-run
-# 第二步：确认无误后执行（用户确认后再运行）
-python migrate.py restore --conflict <overwrite|skip|backup-existing> \
+
+# Step 2: 执行还原（用户确认 dry-run 输出后再运行）
+python migrate.py restore --conflict backup-existing \
   [--agents claude-code,openclaw] [--only skills memory config]
+
+# Step 3: 验证 + 补全脱敏字段
+python migrate.py validate
+# 检查输出中的 __REDACTED__ 字段，手动填入真实值
 ```
 
-- `--conflict` 策略：`overwrite` 覆盖 / `skip` 跳过已有 / `backup-existing` 备份旧文件后覆盖（**推荐**）
+### 参数说明
+
+- `--conflict`：`backup-existing`（**推荐**，备份旧文件后覆盖） / `overwrite`（直接覆盖） / `skip`（跳过已有）
 - `--agents`：只还原指定 Agent
-- `--only`：按模块粒度选择，可选模块：`config` `memory` `skills` `rules` `agents` `commands` `scheduled_tasks` `stats` `plans` `history` `plugins` `project_memories`
-- 智能合并：`__REDACTED__` 占位符保留本机已有敏感值
+- `--only`：按模块选择还原范围
+  - 核心：`config` `memory` `skills` `rules`
+  - 扩展：`agents` `commands` `scheduled_tasks` `stats` `project_memories`
+  - Full 层级：`plans` `history` `plugins`
 - `--force`：完整性校验失败时强制继续（谨慎使用）
-- **还原完成后建议执行 `validate`，检查结果并提醒用户填写 `__REDACTED__` 字段**
+- 智能合并：`__REDACTED__` 占位符保留本机已有敏感值，不会覆盖真实密钥
 
 ## init — 初始化远程仓库
 
@@ -170,15 +182,18 @@ Hermes       ⚠️ 未检测到（~/.hermes/ 不存在）
 
 ## 使用场景
 
-> **快速决策**：用户说「备份」→ `backup --push`。说「换机器」→ 走完整迁移流程。说「只还原XX」→ `restore --agents/--only`。
+> **快速决策**：根据用户意图选择对应动作，不需要用户了解具体命令。
 
-### 「备份一下」
+### 「备份一下」/ 「backup」
 
-```bash
-python migrate.py backup --push
-```
+1. 运行 `migrate.py status` 了解当前状态
+2. 告知用户检测到哪些 Agent、上次备份时间
+3. 用户确认后运行 `migrate.py backup --push`
+4. 汇报结果（备份了几个 Agent、几个文件、是否推送成功）
 
-### 「我要换机器了」
+### 「我要换机器了」/ 「迁移」
+
+引导用户在**旧机器**执行完整备份，然后给出新机器的还原步骤：
 
 ```
 旧机器：
@@ -187,22 +202,19 @@ python migrate.py backup --push
 新机器：
   2. git clone <backup-repo-url> ~/.claude-backup
   3. git clone https://github.com/AlphaWill0/agent-mind-migrate.git ~/.claude/skills/agent-mind-migrate
-  4. python ~/.claude/skills/agent-mind-migrate/scripts/migrate.py restore --dry-run
-  5. restore --conflict backup-existing
-  6. validate → 手动填写 __REDACTED__ 脱敏字段
+  4. python migrate.py restore --dry-run          ← 预览还原内容
+  5. python migrate.py restore --conflict backup-existing
+  6. python migrate.py validate                   ← 检查 + 补填 __REDACTED__
 ```
 
-### 「只还原某个 Agent」
+### 「只还原某个 Agent / 某些模块」
 
-```bash
-python migrate.py restore --agents openclaw --conflict backup-existing
-```
+根据用户意图拼接参数：
+- 指定 Agent → `--agents openclaw`
+- 指定模块 → `--only skills memory`
+- 两者可组合 → `--agents claude-code --only skills`
 
-### 「只还原 skills 和记忆」
-
-```bash
-python migrate.py restore --conflict backup-existing --only skills memory
-```
+始终先 `--dry-run` 预览，确认后再执行。
 
 ---
 
